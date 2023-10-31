@@ -1,0 +1,115 @@
+Stage: Deployments
+A) Create a Task Definition
+AWS Console Navigation:
+ECS Dashboard >> Task Definitions >> Create new Task Definition
+B) Create a Target Group
+AWS Console Navigation:
+EC2 Dashboard >> Load Balancing >> Target Groups >> Create Target Group
+C) Create ALB Rule
+AWS Console Navigation:
+EC2 Dashboard >> Load Balancers >> Select your load balancer >> Listeners tab >> View/edit rules for a listener >> Add Rule
+D) Create ECS Service and Register with Target Group
+AWS Console Navigation:
+ECS Dashboard >> Clusters >> Select your cluster >> Services >> Create
+E) Tag All The Resources Created with Stage
+AWS Console Navigation:
+Navigate to the specific service’s dashboard (ECS, EC2, etc.) >> Select the specific resource >> Manage tags >> Add Tags
+
+
+
+
+Stage: Go Live
+Steps and Navigation:
+Create ALB Rule for Live Route
+
+Description and Navigation: (Refer to "Create ALB Rule" in Deployments Stage)
+Attach/Detach Target Groups
+
+Console Navigation: EC2 Dashboard >> Load Balancing >> Target Groups >> Select Target Group >> Targets Tab >> Edit
+Description: Modifying target groups attached to the load balancer for routing traffic.
+Tagging Resources
+
+Description and Navigation: (Refer to "Tagging Resources" in Deployments Stage)
+
+
+
+
+Stage: Commit
+Steps and Navigation:
+Delete Temporary ALB Route
+Console Navigation: EC2 Dashboard >> Load Balancers >> Select your load balancer >> Listeners tab >> View/edit rules for a listener >> Delete
+Description: Removing unnecessary ALB rules to clean up and manage routes efficiently.
+Delete Resources (Service, Target Group, ALB Rules)
+Console Navigation:
+For ECS Services: ECS Dashboard >> Clusters >> Select your cluster >> Services >> Delete
+For Target Groups: EC2 Dashboard >> Load Balancing >> Target Groups >> Delete
+Description: Cleaning up resources that are no longer needed to free up space and manage costs.
+
+
+
+
+
+
+
+
+Jenkins Groovy Script Flow: Stage Deployments
+Here’s a step-by-step breakdown of what a Jenkins Groovy script does during the "Stage Deployments" phase:
+
+1) Check Cluster Status
+The script begins by checking the status of the ECS cluster to ensure it’s active.
+Logic:
+groovy
+Copy code
+if (clusterStatus == 'active') {
+    proceed to next step
+} else {
+    fail the build
+}
+2) Retrieve AWS Credentials
+AWS credentials are fetched from the Secret Manager to authenticate and authorize the subsequent operations.
+Logic:
+groovy
+Copy code
+awsCredentials = fetchFromSecretManager('aws-creds')
+3) Verify App Type and AppD Status
+The script verifies the type of application and checks whether AppDynamics (AppD) monitoring is enabled.
+Logic:
+groovy
+Copy code
+if (appType verified && appD == 'enabled') {
+    proceed to next step
+}
+4) Construct ecsTask.yml
+Constructs a YAML file with necessary parameters for the ECS task definition.
+Logic:
+groovy
+Copy code
+ecsTask = createYML('ecsTask.yml', taskDefinitionParams)
+5) Construct albTargetgroup.yml
+Constructs another YAML file defining parameters for the ALB target group.
+Logic:
+groovy
+Copy code
+albTargetgroup = createYML('albTargetgroup.yml', targetGroupParams)
+6) Resource Cleanup Process
+Identifies resources tagged as ‘stage’ or ‘blue’ for the service and cleans them up, ensuring a fresh deployment.
+Logic:
+groovy
+Copy code
+cleanUpResources(['stage', 'blue'])
+7) Verification of Live Resources
+Verifies the existence and correctness of live resources, ensuring that they are in the right count.
+Logic:
+groovy
+Copy code
+if (verifyLiveResources()) {
+    proceed to next step
+} else {
+    refer to confluence page for manual cleanup
+}
+8) Execution of Deployment Flow
+Executes the previously defined deployment flow, ensuring each step is completed successfully.
+Logic:
+groovy
+Copy code
+executeDeploymentFlow()
